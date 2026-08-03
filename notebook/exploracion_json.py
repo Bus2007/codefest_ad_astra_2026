@@ -1,7 +1,7 @@
 import json
 from collections import Counter
 
-# 1. Cargar el registro ya guardado (no releer el excel)
+# 1. Cargar el registro ya guardado
 registros = {}
 with open("data/processed/doc_registry.jsonl", "r", encoding="utf-8") as f:
     for linea in f:
@@ -18,8 +18,8 @@ for doc_id, datos in registros.items():
         continue
 
     try:
-        with open(datos["ruta_final"], "r", encoding="utf-8") as f:
-            contenido = json.load(f)
+        with open(datos["ruta_final"], "r", encoding="utf-8") as archivo_abierto:
+            contenido = json.load(archivo_abierto)
     except Exception as e:
         archivos_con_error.append((doc_id, str(e)))
         continue
