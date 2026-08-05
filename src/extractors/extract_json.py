@@ -139,7 +139,7 @@ for doc_id, datos in registros.items():
                             continue
                         partes_texto.append(f"{campo}: {valor}")
 
-                    texto_elemento = ". ".join(partes_texto)
+                    texto_elemento = ", ".join(partes_texto)
                     texto_extraido.append(texto_elemento)
 
             elif contenido[0].keys()&campos_metadata:
