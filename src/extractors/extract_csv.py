@@ -21,6 +21,26 @@ def detectar_idioma_documento(df, columnas_texto, muestra=20):
         print(f"{doc_id}: no se pudo detectar idioma")
 
 
+def construir_fragmento_publicaciones(row, columnas, doc_id, indice, datos, idioma_doc):
+    texto = ", ".join(f"{col}: {row[col]}" for col in columnas if pd.notna(row[col]))
+
+    return Fragmento(
+        doc_id=doc_id,
+        chunk_id=f"{doc_id}_chunk_{indice}",
+        fuente=datos["nombre_archivo"],
+        formato="csv",
+        fenomeno=datos["fenomeno"],
+        posicion=indice,
+        num_tokens=len(texto.split()),
+        texto=texto,
+        idioma=idioma_doc,
+        url=row["url"] if pd.notna(row["url"]) else None,
+        fecha_publicacion=row["fecha"] if pd.notna(row["fecha"]) else None,
+        autores=None,  # ninguna de las dos fuentes trae columna de autor
+        tags=row["fenomeno"] if pd.notna(row["fenomeno"]) else None,
+    )
+
+
 def construir_fragmento_aiindex_clinicaltrials(row, columnas, doc_id, indice, datos, idioma_doc):
 
     texto = ", ".join(f"{col}: {row[col]}" for col in columnas if pd.notna(row[col]))
@@ -85,6 +105,71 @@ def construir_fragmento_aiindex_pubmed_timeline(row, columnas, doc_id, indice, d
         autores=None,
         tags=None,
     )
+
+
+def construir_fragmento_daio(row, columnas, doc_id, indice, datos, idioma_doc):
+    texto = ", ".join(f"{col}: {row[col]}" for col in columnas if pd.notna(row[col]))
+    return Fragmento(
+        doc_id=doc_id, chunk_id=f"{doc_id}_chunk_{indice}",
+        fuente=datos["nombre_archivo"], formato="csv", fenomeno=datos["fenomeno"],
+        posicion=indice, num_tokens=len(texto.split()), texto=texto, idioma=idioma_doc,
+        url=row["url_pdf"] if pd.notna(row["url_pdf"]) else (row["url_page"] if pd.notna(row["url_page"]) else None),
+        fecha_publicacion=row["year"] if pd.notna(row["year"]) else None,
+        autores=row["authors"] if pd.notna(row["authors"]) else None,
+        tags=row["country"] if pd.notna(row["country"]) else None,
+    )
+
+
+def construir_fragmento_rutan(row, columnas, doc_id, indice, datos, idioma_doc):
+    texto = ", ".join(f"{col}: {row[col]}" for col in columnas if pd.notna(row[col]))
+    return Fragmento(
+        doc_id=doc_id, chunk_id=f"{doc_id}_chunk_{indice}",
+        fuente=datos["nombre_archivo"], formato="csv", fenomeno=datos["fenomeno"],
+        posicion=indice, num_tokens=len(texto.split()), texto=texto, idioma=idioma_doc,
+        url=row["url"] if pd.notna(row["url"]) else None,
+        fecha_publicacion=None,  # no trae fecha de publicación, solo "scraped_at" (fecha de scraping)
+        autores=None,
+        tags=row["fenomeno"] if pd.notna(row["fenomeno"]) else None,
+    )
+
+
+def construir_fragmento_csis(row, columnas, doc_id, indice, datos, idioma_doc):
+    texto = ", ".join(f"{col}: {row[col]}" for col in columnas if pd.notna(row[col]))
+    return Fragmento(
+        doc_id=doc_id, chunk_id=f"{doc_id}_chunk_{indice}",
+        fuente=datos["nombre_archivo"], formato="csv", fenomeno=datos["fenomeno"],
+        posicion=indice, num_tokens=len(texto.split()), texto=texto, idioma=idioma_doc,
+        url=row["pdf_url"] if pd.notna(row["pdf_url"]) else (row["page_url"] if pd.notna(row["page_url"]) else None),
+        fecha_publicacion=row["año"] if pd.notna(row["año"]) else None,
+        autores=None,
+        tags=row["fenomeno"] if pd.notna(row["fenomeno"]) else None,
+    )
+
+
+def construir_fragmento_mappoea(row, columnas, doc_id, indice, datos, idioma_doc):
+    texto = ", ".join(f"{col}: {row[col]}" for col in columnas if pd.notna(row[col]))
+    return Fragmento(
+        doc_id=doc_id, chunk_id=f"{doc_id}_chunk_{indice}",
+        fuente=datos["nombre_archivo"], formato="csv", fenomeno=datos["fenomeno"],
+        posicion=indice, num_tokens=len(texto.split()), texto=texto, idioma=idioma_doc,
+        url=row["url"] if pd.notna(row["url"]) else None,
+        fecha_publicacion=row["year"] if pd.notna(row["year"]) else None,
+        autores=None,
+        tags=None,  # la columna "idioma" del CSV es el idioma del PDF (ENG/ESP), no un tema/tag
+    )
+
+
+def construir_fragmento_resdal(row, columnas, doc_id, indice, datos, idioma_doc):
+    texto = ", ".join(f"{col}: {row[col]}" for col in columnas if pd.notna(row[col]))
+    return Fragmento(
+        doc_id=doc_id, chunk_id=f"{doc_id}_chunk_{indice}",
+        fuente=datos["nombre_archivo"], formato="csv", fenomeno=datos["fenomeno"],
+        posicion=indice, num_tokens=len(texto.split()), texto=texto, idioma=idioma_doc,
+        url=row["url"] if pd.notna(row["url"]) else None,
+        fecha_publicacion=row["year"] if pd.notna(row["year"]) else None,
+        autores=None,
+        tags=row["category"] if pd.notna(row["category"]) else None,
+    )
 registros = {}
 
 with open("data/processed/doc_registry.jsonl", "r", encoding="utf-8") as f:
@@ -102,7 +187,7 @@ for doc_id, datos in registros.items():
     
     total_csvs += 1
     
-    contenido = pd.read_csv(datos["ruta_final"], encoding="utf-8", on_bad_lines="skip")
+    contenido = pd.read_csv(datos["ruta_final"],encoding="utf-8",on_bad_lines="skip",sep=None,engine="python",)
     idioma_doc = detectar_idioma_documento(contenido, contenido.columns) 
 
     if idioma_doc not in ("en", "es", "pt"):
@@ -119,6 +204,18 @@ for doc_id, datos in registros.items():
         construir_fragmento = construir_fragmento_aiindex_pubmed_detalle
     elif codigo == "AIINDEX" and "clinicaltrials" in nombre_archivo:
         construir_fragmento = construir_fragmento_aiindex_clinicaltrials
+    elif "publicaciones" in nombre_archivo:
+        construir_fragmento = construir_fragmento_publicaciones
+    elif codigo == "DAIO":
+        construir_fragmento = construir_fragmento_daio
+    elif codigo == "RUTAN":
+        construir_fragmento = construir_fragmento_rutan
+    elif codigo == "CSIS":
+        construir_fragmento = construir_fragmento_csis
+    elif codigo == "MAPPOEA":
+        construir_fragmento = construir_fragmento_mappoea
+    elif codigo == "RESDAL":
+        construir_fragmento = construir_fragmento_resdal
     else:
         print(f"{doc_id}: sin constructor definido todavía, se omite")
         continue
@@ -127,16 +224,16 @@ for doc_id, datos in registros.items():
     try:
         print("documento numero", total_csvs,"impreso")
         # debug rápido — mirá qué campos tiene un registro cualquiera
-        print(list(registros.values())[0].keys())
-        print("contenido:", contenido)
+        #print(list(registros.values())[0].keys())
+        #print("contenido:", contenido)
 
         for index, fila in contenido.iterrows():
             fragmento = construir_fragmento(fila, contenido.columns, doc_id, index, datos, idioma_doc)
             #print(fila['nombre_columna'])
             print(fragmento)
 
-            #with open("data/processed/fragments.jsonl", "a", encoding="utf-8") as f_out:
-               # f_out.write(json.dumps(fragmento.__dict__, ensure_ascii=False) + "\n")
+            with open("data/processed/fragments.jsonl", "a", encoding="utf-8") as f_out:
+               f_out.write(json.dumps(fragmento.__dict__, ensure_ascii=False) + "\n")
 
     except Exception as e:
         errores += 1
