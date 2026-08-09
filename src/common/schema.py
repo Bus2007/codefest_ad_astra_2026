@@ -25,5 +25,5 @@ class Fragmento:
             raise ValueError("num_tokens debe ser no negativo")
         if self.idioma not in ("en", "es", "pt"):
             raise ValueError("idioma debe ser en(ingles), es(español) o pt(portugues)")
-        if self.formato not in ("pdf", "html", "md", "json", "csv", "xlsx", "imagen", "pbf"):
-            raise ValueError("formato debe ser pdf, html, md, json, csv, xlsx, imagen o pbf")
+        if self.formato not in ("pdf", "html", "texto", "json", "csv", "xlsx", "imagen", "pbf"):
+            raise ValueError("formato debe ser pdf, html, texto, json, csv, xlsx, imagen o pbf")
