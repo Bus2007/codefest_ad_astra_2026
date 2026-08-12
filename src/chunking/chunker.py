@@ -1,4 +1,5 @@
 import json
+import re
 import nltk
 from transformers import AutoTokenizer
 
@@ -61,7 +62,6 @@ def almacenar_oraciones(oraciones: list[str]) -> tuple[list[tuple[str, int]], in
 
     for oracion, tokens_oracion in zip(oraciones, tokens_oraciones):
 
-        # Si una sola oración supera el límite, NO se corta.
         if tokens_oracion > limite_tokens:
             oraciones_sobre_limite += 1
 
@@ -73,12 +73,10 @@ def almacenar_oraciones(oraciones: list[str]) -> tuple[list[tuple[str, int]], in
             chunks.append((oracion, tokens_oracion))
             continue
 
-        # Si la oración cabe en el chunk actual, se agrega.
         if tokens_actuales + tokens_oracion <= limite_tokens:
             chunk_actual.append(oracion)
             tokens_actuales += tokens_oracion
 
-        # Si no cabe, se cierra el chunk y la oración
         else:
             if chunk_actual:
                 chunks.append((" ".join(chunk_actual), tokens_actuales))
@@ -90,6 +88,15 @@ def almacenar_oraciones(oraciones: list[str]) -> tuple[list[tuple[str, int]], in
         chunks.append((" ".join(chunk_actual), tokens_actuales))
 
     return chunks, oraciones_sobre_limite
+
+def es_contenido_sin_info_relevante(texto: str) -> bool:
+    lineas = [l.strip() for l in texto.split("\n") if l.strip()]
+    if len(lineas) < 5:
+        return False
+
+    lineas_cortas_numericas = sum(1 for l in lineas if len(l) <= 15 and re.match(r'^[\d.,%\s]+$|^\d{4}$', l))
+    proporcion = lineas_cortas_numericas / len(lineas)
+    return proporcion >= 0.4
 
 
 # Cargar fragmentos extraídos
@@ -105,6 +112,7 @@ fragmentos_sin_chunking = 0
 fragmentos_con_chunking = 0
 fragmentos_vacios = 0
 oraciones_sobre_limite = 0
+chunks_descartados_innecesarios = 0
 posicion_por_documento = {}
 
 for i, fragmento in enumerate(fragmentos_iniciales, start=1):
@@ -142,6 +150,10 @@ for i, fragmento in enumerate(fragmentos_iniciales, start=1):
     oraciones_sobre_limite += sobre_limite
 
     for porcion, num_tokens in porciones:
+        if es_contenido_sin_info_relevante(porcion):
+            chunks_descartados_innecesarios += 1
+            continue
+
         nuevo_chunk = dict(fragmento)
         posicion = posicion_por_documento[doc_id]
         nuevo_chunk["texto"] = porcion
@@ -163,4 +175,5 @@ print(f"fragmentos sin chunking: {fragmentos_sin_chunking}")
 print(f"fragmentos con chunking: {fragmentos_con_chunking}")
 print(f"fragmentos vacios: {fragmentos_vacios}")
 print(f"oraciones sobre limite: {oraciones_sobre_limite}")
+print(f"chunks descartados por ser contenido sin info relevante (sin prosa): {chunks_descartados_innecesarios}")
 print(f"total de chunks generados: {len(chunks_finales)}")
