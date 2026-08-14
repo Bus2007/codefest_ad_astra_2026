@@ -3,6 +3,3 @@ data/interim/
 __pycache__/
 *.pyc
 .venv/
-
-*.jsonl
-!entrega/resultados.jsonl
