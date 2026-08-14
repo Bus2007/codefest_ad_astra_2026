@@ -107,7 +107,6 @@ for doc_id, datos in registros.items():
                 tags=None,
             )
 
-            # Reemplaza si ya existia (corrida anterior), agrega si es nuevo
             fragmentos_por_chunk_id[chunk_id] = fragmento.__dict__
 
             posicion += 1

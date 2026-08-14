@@ -76,7 +76,6 @@ def construir_fragmento_txt(doc_id, datos):
     )
     return fragmento, idioma_doc
 
-# --- Idempotencia: cargar fragmentos existentes (de este y otros extractores) ---
 fragmentos_por_chunk_id = {}
 if os.path.exists(RUTA_FRAGMENTS):
     with open(RUTA_FRAGMENTS, "r", encoding="utf-8") as f:
@@ -113,7 +112,6 @@ for doc_id, datos in registros.items():
                 descartados_por_longitud += 1
             continue
 
-        # Reemplaza si ya existia (corrida anterior), agrega si es nuevo
         fragmentos_por_chunk_id[fragmento.chunk_id] = fragmento.__dict__
 
     except Exception as e:
